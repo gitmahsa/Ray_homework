@@ -229,7 +229,7 @@ assert hasattr(compute_loss, 'remote'), 'compute_loss must be a remote function'
 # Sleep a little to improve the accuracy of the timing measurements below.
 time.sleep(2.0)
 start_time = time.time()
-
+losses_id=[]
 losses = []
 for filename in ['file1', 'file2', 'file3', 'file4']:
     inner_start = time.time()
@@ -238,7 +238,7 @@ for filename in ['file1', 'file2', 'file3', 'file4']:
     normalized_data = normalize_data.remote(data)
     features = extract_features.remote(normalized_data)
     loss = compute_loss.remote(features)
-    losses.append(ray.get(loss))
+    losses_id.append(loss)
     
     inner_end = time.time()
     
@@ -246,7 +246,7 @@ for filename in ['file1', 'file2', 'file3', 'file4']:
         raise Exception('You may be calling ray.get inside of the for loop! '
                         'Doing this will prevent parallelism from being exposed. '
                         'Make sure to only call ray.get once outside of the for loop.')
-
+losses=ray.get(losses_id)
 print('The losses are {}.'.format(losses) + '\n')
 loss = sum(losses)
 
@@ -373,8 +373,8 @@ f2.reset.remote()
 results = []
 result_ids=[]
 for _ in range(5):
-    result_ids.append(f1.increment())
-    results_ids.append(f2.increment())
+    result_ids.append(f1.increment.remote())
+    result_ids.append(f2.increment.remote())
 results= ray.get(result_ids)
 end_time = time.time()
 duration = end_time - start_time
@@ -444,11 +444,11 @@ result_ids = [f.remote(i) for i in range(6)]
 # Get one batch of tasks. Instead of waiting for a fixed subset of tasks, we
 # should instead use the first 3 tasks that finish.
 #initial_results = ray.get(result_ids[:3])
-initial_results, remaining_ids = ray.wait(result_ids, num_returns=3, timeout=None)
+initial_ids, remaining_ids = ray.wait(result_ids, num_returns=3, timeout=None)
 end_time = time.time()
 duration = end_time - start_time
 
-
+initial_results=ray.get(initial_ids)
 # **EXERCISE:** Change the code below so that `remaining_results` consists of the outputs of the last three tasks to complete.
 
 # In[18]:
@@ -456,7 +456,7 @@ duration = end_time - start_time
 
 # Wait for the remaining tasks to complete.
 #remaining_results = ray.get(result_ids[3:])
-remaining_results=remaining_ids
+remaining_results=ray.get(remaining_ids)
 
 # **VERIFY:** Run some checks to verify that the changes you made to the code were correct. Some of the checks should fail when you initially run the cells. After completing the exercises, the checks should pass.
 
